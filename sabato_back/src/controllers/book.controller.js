@@ -1,23 +1,9 @@
-import prisma from '../prisma.js';
+import bookService from '../services/book.service.js';
 
 class BookController {
-  
   async crear(req, res) {
     try {
-      const { libro_id, titulo, autor, genero, descripcion, portada_url, nivel_educativo } = req.body;
-      
-      const nuevoLibro = await prisma.libro.create({
-        data: {
-          libro_id: Number(libro_id),
-          titulo,
-          autor,
-          genero,
-          descripcion,
-          portada_url,
-          nivel_educativo
-        }
-      });
-
+      const nuevoLibro = await bookService.crear(req.body);
       res.status(201).json({ 
         mensaje: 'Libro creado correctamente',
         libro: nuevoLibro
@@ -30,7 +16,7 @@ class BookController {
 
   async obtenerCatalogo(req, res) {
     try {
-      const libros = await prisma.libro.findMany();
+      const libros = await bookService.obtenerTodos();
       res.json(libros);
     } catch (error) {
       console.error('Error al obtener catálogo:', error);
@@ -41,9 +27,7 @@ class BookController {
   async verDetalle(req, res) {
     const { id } = req.params;
     try {
-      const libro = await prisma.libro.findUnique({
-        where: { libro_id: Number(id) }
-      });
+      const libro = await bookService.obtenerPorId(id);
 
       if (!libro) {
         return res.status(404).json({ mensaje: 'Libro no encontrado' });
@@ -57,22 +41,7 @@ class BookController {
 
   async buscar(req, res) {
     try {
-      const { q, genero, nivel_educativo } = req.query;
-      
-      const filtros = {};
-      if (q) {
-        filtros.OR = [
-          { titulo: { contains: q, mode: 'insensitive' } },
-          { autor: { contains: q, mode: 'insensitive' } }
-        ];
-      }
-      if (genero) filtros.genero = genero;
-      if (nivel_educativo) filtros.nivel_educativo = nivel_educativo;
-
-      const libros = await prisma.libro.findMany({
-        where: filtros
-      });
-
+      const libros = await bookService.buscar(req.query);
       res.json(libros);
     } catch (error) {
       console.error('Error al buscar libros:', error);
@@ -83,10 +52,7 @@ class BookController {
   async actualizar(req, res) {
     const { id } = req.params;
     try {
-      const libroActualizado = await prisma.libro.update({
-        where: { libro_id: Number(id) },
-        data: req.body
-      });
+      const libroActualizado = await bookService.actualizar(id, req.body);
       res.json({ mensaje: 'Libro actualizado correctamente', libro: libroActualizado });
     } catch (error) {
       console.error('Error al actualizar:', error);
@@ -97,10 +63,7 @@ class BookController {
   async eliminar(req, res) {
     const { id } = req.params;
     try {
-      await prisma.libro.delete({
-        where: { libro_id: Number(id) }
-      });
-      
+      await bookService.eliminar(id);
       res.status(204).send(); 
     } catch (error) {
       console.error('Error al eliminar:', error);

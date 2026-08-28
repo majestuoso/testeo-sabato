@@ -1,20 +1,10 @@
 import { Router } from 'express';
-import {
-  crearComentario,
-  obtenerComentarios,
-  obtenerComentario,
-  actualizarComentario,
-  eliminarComentario
-} from '../controllers/comentario.controller.js';
+import comentarioController from '../controllers/comentario.controller.js';
 
 const router = Router();
 
-router.post('/', crearComentario);
-router.get('/:foro_id', obtenerComentarios);
-router.get('/:id', obtenerComentario);
-router.put('/:id', actualizarComentario);
-router.delete('/:id', eliminarComentario);
-
-router.post('/:id/comentarios', crearComentario);
+router.post('/', comentarioController.crear);
+router.get('/:foro_id', comentarioController.obtenerPorForo);
+router.delete('/:id', comentarioController.eliminar);
 
 export default router;

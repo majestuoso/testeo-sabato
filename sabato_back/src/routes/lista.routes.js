@@ -1,13 +1,11 @@
-import { Router } from "express";
-import ListaController from "../controllers/lista.controller.js";
+import { Router } from 'express';
+import listaController from '../controllers/lista.controller.js';
 
 const router = Router();
 
-
-router.get("/", ListaController.obtenerTodas);
-router.get("/:id", ListaController.obtenerPorId);
-router.post("/", ListaController.crear);
-router.put("/:id", ListaController.actualizar);
-router.delete("/:id", ListaController.eliminar);
+router.get('/', listaController.obtenerTodas);
+router.get('/:id', listaController.obtenerPorId);
+router.post('/', listaController.crear);
+router.delete('/:id', listaController.eliminar);
 
 export default router;

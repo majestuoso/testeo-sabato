@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { obtenerMedallasUsuario } from '../controllers/medal.controller.js';
+import medalController from '../controllers/medal.controller.js';
 
 const router = Router();
 
-// Ruta para obtener las medallas de un usuario
-router.get('/:usuario_id', obtenerMedallasUsuario);
+router.get('/', medalController.obtenerTodas);
+router.get('/:usuario_id', medalController.obtenerPorUsuario);
+router.post('/', medalController.otorgarMedalla);
 
 export default router;

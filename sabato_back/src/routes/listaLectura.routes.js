@@ -1,13 +1,10 @@
-import { Router } from "express";
-import ListaLecturaController from "../controllers/listaLectura.controller.js";
+import { Router } from 'express';
+import listaLecturaController from '../controllers/listaLectura.controller.js';
 
 const router = Router();
 
-router.post("/", ListaLecturaController.crear);
-router.get("/", ListaLecturaController.obtenerTodas);
-router.get("/docente/:docente_id", ListaLecturaController.obtenerPorDocente);
-router.put("/:lista_id/:docente_id", ListaLecturaController.actualizar);
-router.delete("/:lista_id/:docente_id", ListaLecturaController.eliminar);
+router.get('/:docente_id', listaLecturaController.obtenerPorDocente);
+router.post('/', listaLecturaController.crear);
+router.delete('/:lista_id/:docente_id', listaLecturaController.eliminar);
 
 export default router;
-

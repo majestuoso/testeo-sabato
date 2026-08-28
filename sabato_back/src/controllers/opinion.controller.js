@@ -1,192 +1,40 @@
-import prisma from '../prisma.js';
-import leoProfanity from "leo-profanity";
-
-// Inicializamos los diccionarios de malas palabras
-leoProfanity.loadDictionary("en");
-leoProfanity.loadDictionary("es");
-
-leoProfanity.add(["mierda", "pelotudo", "boludo", "Estupido"]);
+import opinionService from '../services/opinion.service.js';
 
 class OpinionController {
-  async getAllOpinions(req, res) {
-    try {
-      const opinions = await prisma.opinion.findMany({
-        include: {
-          usuario: true,
-          libro: true
+    async obtenerPorLibro(req, res) {
+        try {
+            const { libro_id } = req.params;
+            const opiniones = await opinionService.obtenerPorLibro(libro_id);
+            res.json(opiniones);
+        } catch (error) {
+            console.error('Error al obtener opiniones:', error);
+            res.status(500).json({ mensaje: 'Error al obtener las opiniones del libro' });
         }
-      });
-      return res.status(200).json(opinions);
-    } catch (error) {
-      console.error("Error getting opinions:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
-  async getOpinionById(req, res) {
-    try {
-      const opinionId = parseInt(req.params.id, 10);
-      if (isNaN(opinionId)) {
-        return res.status(400).json({ error: "Invalid opinion ID" });
-      }
-
-      const opinion = await prisma.opinion.findUnique({
-        where: { opinion_id: opinionId },
-        include: {
-          usuario: true,
-          libro: true
+    async crear(req, res) {
+        try {
+            const nuevaOpinion = await opinionService.crear(req.body);
+            res.status(201).json({
+                mensaje: 'Opinión creada correctamente',
+                opinion: nuevaOpinion
+            });
+        } catch (error) {
+            console.error('Error al crear opinión:', error);
+            res.status(500).json({ mensaje: 'Error al crear la opinión' });
         }
-      });
-
-      if (!opinion) {
-        return res.status(404).json({ error: "Opinion not found" });
-      }
-
-      return res.status(200).json(opinion);
-    } catch (error) {
-      console.error("Error getting opinion by ID:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
-  async createOpinion(req, res) {
-    try {
-      const { usuario_id, libro_id, calificacion, comentario } = req.body;
-
-      if (!usuario_id || !libro_id || !calificacion || !comentario) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Moderación automática 
-      const comentarioLimpio = leoProfanity.clean(comentario);
-
-      const newOpinion = await prisma.opinion.create({
-        data: {
-          usuario_id: Number(usuario_id),
-          libro_id: Number(libro_id),
-          calificacion: Number(calificacion),
-          comentario: comentarioLimpio
-        },
-        include: {
-          usuario: true,
-          libro: true
+    async eliminar(req, res) {
+        try {
+            const { id } = req.params;
+            await opinionService.eliminar(id);
+            res.status(204).send();
+        } catch (error) {
+            console.error('Error al eliminar opinión:', error);
+            res.status(500).json({ mensaje: 'Error al eliminar la opinión' });
         }
-      });
-
-      console.log(newOpinion);
-
-      // Verificar y asignar medallas después de crear el comentario del usuario (si implementas medallas por Prisma más adelante)
-      // await medalModel.verificarYAsignarMedallas(usuario_id);
-
-      return res.status(201).json(newOpinion);
-    } catch (error) {
-      console.error("Error creating opinion:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
-
-  async updateOpinion(req, res) {
-    try {
-      const opinionId = parseInt(req.params.id, 10);
-      if (isNaN(opinionId)) {
-        return res.status(400).json({ error: "Invalid opinion ID" });
-      }
-
-      const existingOpinion = await prisma.opinion.findUnique({
-        where: { opinion_id: opinionId }
-      });
-
-      if (!existingOpinion) {
-        return res.status(404).json({ error: "Opinion not found" });
-      }
-
-      // Verifica permisos: solo autor o admin
-      const userId = req.userId;
-      const userRole = req.userRole;
-
-      if (userRole !== 3 && userId !== existingOpinion.usuario_id) {
-        return res.status(403).json({ error: "Not authorized to modify this opinion" });
-      }
-
-      // Limpiar comentario si viene texto nuevo
-      const updatedFields = req.body;
-      if (updatedFields.comentario) {
-        updatedFields.comentario = leoProfanity.clean(updatedFields.comentario);
-      }
-
-      const updatedOpinion = await prisma.opinion.update({
-        where: { opinion_id: opinionId },
-        data: {
-          ...(updatedFields.calificacion && { calificacion: Number(updatedFields.calificacion) }),
-          ...(updatedFields.comentario && { comentario: updatedFields.comentario })
-        },
-        include: {
-          usuario: true,
-          libro: true
-        }
-      });
-
-      return res.status(200).json(updatedOpinion);
-    } catch (error) {
-      console.error("Error updating opinion:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  async deleteOpinion(req, res) {
-    try {
-      const opinionId = parseInt(req.params.id, 10);
-      if (isNaN(opinionId)) {
-        return res.status(400).json({ error: "Invalid opinion ID" });
-      }
-
-      const existingOpinion = await prisma.opinion.findUnique({
-        where: { opinion_id: opinionId }
-      });
-
-      if (!existingOpinion) {
-        return res.status(404).json({ error: "Opinion not found" });
-      }
-
-      // Solo el autor o admin pueden borrar
-      const userId = req.userId;
-      const userRole = req.userRole;
-
-      if (userRole !== 3 && userId !== existingOpinion.usuario_id) {
-        return res.status(403).json({ error: "Not authorized to delete this opinion" });
-      }
-
-      await prisma.opinion.delete({
-        where: { opinion_id: opinionId }
-      });
-
-      return res.status(204).end();
-    } catch (error) {
-      console.error("Error deleting opinion:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  async getOpinionsByLibro(req, res) {
-    try {
-      const libroId = parseInt(req.params.libro_id, 10);
-      if (isNaN(libroId)) {
-        return res.status(400).json({ error: "Invalid libro ID" });
-      }
-
-      const sqlOpinions = await prisma.opinion.findMany({
-        where: { libro_id: libroId },
-        include: {
-          usuario: true
-        }
-      });
-
-      return res.status(200).json(sqlOpinions);
-    } catch (error) {
-      console.error("Error getting opinions by libro:", error.message);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
 }
 
 export default new OpinionController();

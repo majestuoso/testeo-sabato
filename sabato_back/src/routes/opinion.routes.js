@@ -1,16 +1,10 @@
-import { Router } from "express";
-import OpinionController from "../controllers/opinion.controller.js";
-import { verifyToken } from "../middleware/auth.middleware.js";
+import { Router } from 'express';
+import opinionController from '../controllers/opinion.controller.js';
 
 const router = Router();
 
-
-router.get("/", OpinionController.getAllOpinions);
-router.get("/:id", OpinionController.getOpinionById);
-router.post("/", verifyToken, OpinionController.createOpinion);
-router.put("/:id", verifyToken, OpinionController.updateOpinion);
-router.delete("/:id", verifyToken, OpinionController.deleteOpinion);
-router.get("/libro/:libro_id", OpinionController.getOpinionsByLibro);
-
+router.get('/:libro_id', opinionController.obtenerPorLibro);
+router.post('/', opinionController.crear);
+router.delete('/:id', opinionController.eliminar);
 
 export default router;
