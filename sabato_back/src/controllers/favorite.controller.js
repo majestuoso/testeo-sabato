@@ -1,11 +1,16 @@
-import { favoriteModel } from "../models/favorite.model.js";
+import prisma from '../prisma.js';
 
 class FavoriteController {
 
   // 📘 GET: Obtener todos los favoritos (opcional, para testing o admin)
   async getAll(req, res) {
     try {
-      const favorites = await favoriteModel.getAllFavorites();
+      const favorites = await prisma.favorito.findMany({
+        include: {
+          libro: true,
+          usuario: true
+        }
+      });
       res.status(200).json(favorites);
     } catch (error) {
       console.error("Error getting favorites:", error.message);
@@ -23,7 +28,16 @@ class FavoriteController {
         return res.status(400).json({ error: "Missing required fields: usuario_id or libro_id" });
       }
 
-      const newFavorite = await favoriteModel.createFavorite({ usuario_id, libro_id });
+      const newFavorite = await prisma.favorito.create({
+        data: {
+          usuario_id: Number(usuario_id),
+          libro_id: Number(libro_id)
+        },
+        include: {
+          libro: true
+        }
+      });
+
       res.status(201).json({
         message: "Favorite created successfully",
         favorite: newFavorite,
@@ -31,7 +45,8 @@ class FavoriteController {
     } catch (error) {
       console.error("Error creating favorite:", error.message);
 
-      if (error.message.includes("duplicate key")) {
+      // Prisma maneja errores únicos con el código P2002
+      if (error.code === 'P2002' || error.message.includes("duplicate key")) {
         return res.status(409).json({ error: "This book is already in your favorites" });
       }
 
@@ -48,7 +63,13 @@ class FavoriteController {
         return res.status(400).json({ error: "User ID missing in token" });
       }
 
-      const favorites = await favoriteModel.getFavoritesByUser(usuario_id);
+      const favorites = await prisma.favorito.findMany({
+        where: { usuario_id: Number(usuario_id) },
+        include: {
+          libro: true
+        }
+      });
+
       res.status(200).json(favorites);
     } catch (error) {
       console.error("Error getting user favorites:", error.message);
@@ -66,9 +87,17 @@ class FavoriteController {
         return res.status(400).json({ error: "Invalid or missing IDs" });
       }
 
-      const result = await favoriteModel.deleteFavorite(usuario_id, libro_id);
+      // Prisma usa una clave compuesta para eliminar en tablas de PIVOTE (@@id([usuario_id, libro_id]))
+      const deletedFavorite = await prisma.favorito.delete({
+        where: {
+          usuario_id_libro_id: {
+            usuario_id: Number(usuario_id),
+            libro_id: Number(libro_id)
+          }
+        }
+      }).catch(() => null); // Capturamos el error si no existe para manejarlo limpiamente
 
-      if (!result) {
+      if (!deletedFavorite) {
         return res.status(404).json({ error: "Favorite not found" });
       }
 

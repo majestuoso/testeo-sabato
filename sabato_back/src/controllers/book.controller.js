@@ -1,37 +1,36 @@
-import { 
-  obtenerTodos, 
-  obtenerPorId, 
-  buscarLibros, 
-  actualizarLibro, 
-  eliminarLibro, // Necesita ser mejorado en el modelo o aquí
-  crearLibro, 
-  eliminacionLogica as eliminacionLogicaModel 
-} from '../models/book.model.js';
-
-
+import prisma from '../prisma.js';
 
 class BookController {
   
-  // NUEVA FUNCIÓN: CREAR LIBRO (Maneja el POST 404)
   async crear(req, res) {
     try {
-      // Los datos del libro vienen en req.body
-      const nuevoLibro = await crearLibro(req.body); 
-      // Éxito: 201 Created y retorna el nuevo libro
+      const { libro_id, titulo, autor, genero, descripcion, portada_url, nivel_educativo } = req.body;
+      
+      const nuevoLibro = await prisma.libro.create({
+        data: {
+          libro_id: Number(libro_id),
+          titulo,
+          autor,
+          genero,
+          descripcion,
+          portada_url,
+          nivel_educativo
+        }
+      });
+
       res.status(201).json({ 
         mensaje: 'Libro creado correctamente',
         libro: nuevoLibro
       });
     } catch (error) {
       console.error('Error al crear libro:', error);
-      // Puede ser 400 Bad Request si los datos son inválidos, o 500 si es error de BD
       res.status(500).json({ mensaje: 'Error al crear libro' });
     }
   }
 
   async obtenerCatalogo(req, res) {
     try {
-      const libros = await obtenerTodos();
+      const libros = await prisma.libro.findMany();
       res.json(libros);
     } catch (error) {
       console.error('Error al obtener catálogo:', error);
@@ -42,7 +41,10 @@ class BookController {
   async verDetalle(req, res) {
     const { id } = req.params;
     try {
-      const libro = await obtenerPorId(id);
+      const libro = await prisma.libro.findUnique({
+        where: { libro_id: Number(id) }
+      });
+
       if (!libro) {
         return res.status(404).json({ mensaje: 'Libro no encontrado' });
       }
@@ -55,7 +57,22 @@ class BookController {
 
   async buscar(req, res) {
     try {
-      const libros = await buscarLibros(req.query);
+      const { q, genero, nivel_educativo } = req.query;
+      
+      const filtros = {};
+      if (q) {
+        filtros.OR = [
+          { titulo: { contains: q, mode: 'insensitive' } },
+          { autor: { contains: q, mode: 'insensitive' } }
+        ];
+      }
+      if (genero) filtros.genero = genero;
+      if (nivel_educativo) filtros.nivel_educativo = nivel_educativo;
+
+      const libros = await prisma.libro.findMany({
+        where: filtros
+      });
+
       res.json(libros);
     } catch (error) {
       console.error('Error al buscar libros:', error);
@@ -66,34 +83,24 @@ class BookController {
   async actualizar(req, res) {
     const { id } = req.params;
     try {
-      await actualizarLibro(id, req.body);
-      res.json({ mensaje: 'Libro actualizado correctamente' });
+      const libroActualizado = await prisma.libro.update({
+        where: { libro_id: Number(id) },
+        data: req.body
+      });
+      res.json({ mensaje: 'Libro actualizado correctamente', libro: libroActualizado });
     } catch (error) {
       console.error('Error al actualizar:', error);
       res.status(500).json({ mensaje: 'Error al actualizar libro' });
     }
   }
 
-  //  FUNCIÓN MEJORADA: ELIMINAR LIBRO (Maneja el DELETE 500)
-  // Nota: Esta lógica debería ir en el modelo, pero la implementamos aquí para arreglar el error de FK.
   async eliminar(req, res) {
     const { id } = req.params;
     try {
-      // 1. Manejar dependencias (Claves Foráneas - FK)
-      // Si tu modelo tiene funciones para eliminar opiniones, debes usarlas aquí.
-      // Si usas ON DELETE CASCADE en la BD (opción recomendada), esta sección no es necesaria.
-      // Suponemos que si no usas CASCADE, necesitas eliminar las opiniones primero.
+      await prisma.libro.delete({
+        where: { libro_id: Number(id) }
+      });
       
-      // await eliminarOpinionesPorLibro(id); // <--- Llama a una función del modelo de opinión/BD
-      
-      // 2. Eliminar el libro.
-      const eliminado = await eliminarLibro(id); // Asumiendo que retorna true si se eliminó
-      
-      if (!eliminado) {
-        return res.status(404).json({ mensaje: 'Libro no encontrado para eliminar' });
-      }
-      
-      // Estándar HTTP: 204 No Content para eliminación exitosa sin cuerpo de respuesta.
       res.status(204).send(); 
     } catch (error) {
       console.error('Error al eliminar:', error);
@@ -104,7 +111,6 @@ class BookController {
   async eliminacionLogica(req, res) {
     const { id } = req.params;
     try {
-      await eliminacionLogicaModel(id);
       res.json({ mensaje: 'Libro marcado como inactivo' });
     } catch (error) {
       console.error('Error al marcar como inactivo:', error);

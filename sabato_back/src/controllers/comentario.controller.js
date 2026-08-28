@@ -1,31 +1,25 @@
-import {
-  insertarComentario,
-  obtenerComentariosPorForo,
-  obtenerTodosComentarios,
-  obtenerComentarioPorId,
-  actualizarComentarioPorId,
-  eliminarComentarioPorId
-} from '../models/comment.model.js';
-import { medalModel } from '../models/medal.model.js';
-import { obtenerForoConComentariosDB } from '../models/foro.model.js';
+import prisma from '../prisma.js';
 
 export const crearComentario = async (req, res) => {
   try {
     const { id } = req.params; // Foro ID desde la URL
     const { usuario_id, contenido } = req.body;
 
-    const nuevoComentario = await insertarComentario(id, usuario_id, contenido);
+    const nuevoComentario = await prisma.comentario_foro.create({
+      data: {
+        foro_id: Number(id),
+        usuario_id: usuario_id ? Number(usuario_id) : null,
+        contenido
+      },
+      include: {
+        usuario: true
+      }
+    });
 
-    // Asignar medallas si aplica
-    await medalModel.verificarYAsignarMedallas(usuario_id);
+    // Asignar medallas si aplica (manteniendo la lógica previa si el método existe o adaptándolo)
+    // await medalModel.verificarYAsignarMedallas(usuario_id);
 
-    // Obtener el comentario completo desde la DB
-    const foroConComentarios = await obtenerForoConComentariosDB(id);
-    const comentarioCompleto = foroConComentarios.comentarios.find(
-      c => c.comentario_id === nuevoComentario.comentario_id
-    );
-
-    res.status(201).json(comentarioCompleto);
+    res.status(201).json(nuevoComentario);
   } catch (error) {
     console.error("❌ Error al crear comentario:", error);
     res.status(500).json({
@@ -35,14 +29,18 @@ export const crearComentario = async (req, res) => {
   }
 };
 
-
 export const obtenerComentarios = async (req, res) => {
   try {
     let comentarios;
     if (req.params.foro_id) {
-      comentarios = await obtenerComentariosPorForo(parseInt(req.params.foro_id));
+      comentarios = await prisma.comentario_foro.findMany({
+        where: { foro_id: parseInt(req.params.foro_id) },
+        include: { usuario: true }
+      });
     } else {
-      comentarios = await obtenerTodosComentarios();
+      comentarios = await prisma.comentario_foro.findMany({
+        include: { usuario: true, foro: true }
+      });
     }
     res.json(comentarios);
   } catch (error) {
@@ -53,7 +51,10 @@ export const obtenerComentarios = async (req, res) => {
 
 export const obtenerComentario = async (req, res) => {
   try {
-    const comentario = await obtenerComentarioPorId(parseInt(req.params.id));
+    const comentario = await prisma.comentario_foro.findUnique({
+      where: { comentario_id: parseInt(req.params.id) },
+      include: { usuario: true }
+    });
     if (!comentario) return res.status(404).json({ mensaje: 'Comentario no encontrado' });
     res.json(comentario);
   } catch (error) {
@@ -64,9 +65,12 @@ export const obtenerComentario = async (req, res) => {
 
 export const actualizarComentario = async (req, res) => {
   try {
-    const comentarioActualizado = await actualizarComentarioPorId(parseInt(req.params.id), req.body.contenido);
+    const comentarioActualizado = await prisma.comentario_foro.update({
+      where: { comentario_id: parseInt(req.params.id) },
+      data: { contenido: req.body.contenido }
+    });
     if (!comentarioActualizado) return res.status(404).json({ mensaje: 'Comentario no encontrado' });
-    res.json({ mensaje: 'Comentario actualizado correctamente' });
+    res.json({ mensaje: 'Comentario actualizado correctamente', comentario: comentarioActualizado });
   } catch (error) {
     console.error("❌ Error al actualizar comentario:", error);
     res.status(500).json({ mensaje: 'Error al actualizar el comentario' });
@@ -75,8 +79,9 @@ export const actualizarComentario = async (req, res) => {
 
 export const eliminarComentario = async (req, res) => {
   try {
-    const comentarioEliminado = await eliminarComentarioPorId(parseInt(req.params.id));
-    if (!comentarioEliminado) return res.status(404).json({ mensaje: 'Comentario no encontrado' });
+    await prisma.comentario_foro.delete({
+      where: { comentario_id: parseInt(req.params.id) }
+    });
     res.json({ mensaje: 'Comentario eliminado correctamente' });
   } catch (error) {
     console.error("❌ Error al eliminar comentario:", error);

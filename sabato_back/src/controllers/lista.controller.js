@@ -1,4 +1,4 @@
-import { listaModel } from "../models/lista.model.js";
+import prisma from '../prisma.js';
 
 class ListaController {
   async crear(req, res) {
@@ -9,8 +9,15 @@ class ListaController {
         return res.status(400).json({ error: "Faltan campos obligatorios (nombre, tipo)." });
       }
 
-      await listaModel.crearLista(nombre, descripcion, tipo);
-      return res.status(201).json({ message: "Lista creada correctamente." });
+      const nuevaLista = await prisma.lista.create({
+        data: {
+          nombre,
+          descripcion,
+          tipo
+        }
+      });
+
+      return res.status(201).json({ message: "Lista creada correctamente.", lista: nuevaLista });
     } catch (error) {
       console.error("Error creando lista:", error.message);
       return res.status(500).json({ error: "Error interno al crear la lista." });
@@ -19,7 +26,14 @@ class ListaController {
 
   async obtenerTodas(req, res) {
     try {
-      const listas = await listaModel.obtenerTodas();
+      const listas = await prisma.lista.findMany({
+        include: {
+          lista_libro: {
+            include: { libro: true }
+          },
+          lista_lectura: true
+        }
+      });
       return res.status(200).json(listas);
     } catch (error) {
       console.error("Error obteniendo listas:", error.message);
@@ -34,7 +48,16 @@ class ListaController {
         return res.status(400).json({ error: "ID inválido." });
       }
 
-      const lista = await listaModel.obtenerPorId(id);
+      const lista = await prisma.lista.findUnique({
+        where: { lista_id: id },
+        include: {
+          lista_libro: {
+            include: { libro: true }
+          },
+          lista_lectura: true
+        }
+      });
+
       if (!lista) {
         return res.status(404).json({ error: "Lista no encontrada." });
       }
@@ -55,8 +78,16 @@ class ListaController {
         return res.status(400).json({ error: "ID inválido." });
       }
 
-      await listaModel.actualizarLista(id, nombre, descripcion, tipo);
-      return res.status(200).json({ message: "Lista actualizada." });
+      const listaActualizada = await prisma.lista.update({
+        where: { lista_id: id },
+        data: {
+          ...(nombre && { nombre }),
+          ...(descripcion !== undefined && { descripcion }),
+          ...(tipo && { tipo })
+        }
+      });
+
+      return res.status(200).json({ message: "Lista actualizada.", lista: listaActualizada });
     } catch (error) {
       console.error("Error actualizando lista:", error.message);
       return res.status(500).json({ error: "Error interno al actualizar." });
@@ -70,7 +101,10 @@ class ListaController {
         return res.status(400).json({ error: "ID inválido." });
       }
 
-      await listaModel.eliminarLista(id);
+      await prisma.lista.delete({
+        where: { lista_id: id }
+      });
+
       return res.status(200).json({ message: "Lista eliminada." });
     } catch (error) {
       console.error("Error eliminando lista:", error.message);

@@ -3,8 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import foroRoutes from './src/routes/foro.routes.js';
 import comentarioRoutes from './src/routes/comentario.routes.js';
-import userRoutes from './src/routes/user.routes.js'; // viene de main
-import { testConnection } from './src/db/connect/db.js';
+import userRoutes from './src/routes/user.routes.js';
 import listaRoutes from "./src/routes/lista.routes.js";
 import listaLecturaRoutes from "./src/routes/listaLectura.routes.js";
 import authRoutes from "./src/routes/auth.routes.js";
@@ -12,7 +11,7 @@ import bookRoutes from "./src/routes/book.routes.js";
 import opinionRoutes from "./src/routes/opinion.routes.js";
 import favoriteRoutes from "./src/routes/favorite.routes.js";
 import medalRoutes from "./src/routes/medal.routes.js";
-
+import prisma from './src/prisma.js';
 
 const app = express();
 const PORT = 3000;
@@ -45,17 +44,17 @@ app.use("/api/v1/opinion", opinionRoutes);
 app.use("/api/v1/favorites", favoriteRoutes);
 app.use("/api/v1/medal", medalRoutes);
 
-
 app.get("/", (req, res) => {
   res.status(200).send("Hello World!\n");
 });
 
-// Iniciar servidor
-testConnection().then(() => {
+// Iniciar servidor validando la conexión con Prisma
+prisma.$connect().then(() => {
+  console.log('Conexión a la base de datos establecida exitosamente mediante Prisma');
   app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
 }).catch((error) => {
-  console.error('Error al conectar a la base de datos:', error);
+  console.error('Error al conectar a la base de datos con Prisma:', error);
   process.exit(1);
 });
