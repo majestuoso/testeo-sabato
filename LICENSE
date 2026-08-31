@@ -1,21 +1,20 @@
-Licencia MIT
+# LICENSE / DERECHOS DE AUTOR
 
-Copyright (c) [2026] [sababook]
+```text
+Copyright (c) 2026 All rights reserved. [Isfdyt 166]
 
-Se concede permiso, de forma gratuita, a cualquier persona que obtenga una copia.
-de este software y los archivos de documentación asociados (el "Software"), para tratar
-en el Software sin restricción alguna, incluyendo sin limitación los derechos
-usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar y/o vender
-copias del Software y permitir a las personas a quienes se les proporciona el Software
-provistos para hacerlo, sujeto a las siguientes condiciones:
+This file is part of "La Gran Ocasion".
 
-El aviso de derechos de autor anterior y este aviso de permiso se incluirán en todos
-copias o partes sustanciales del Software.
+This software and its associated documentation files (the "Software") are the 
+exclusive and confidential property of Sabato.
 
-EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O IMPLÍCITA.
-IMPLÍCITAS, INCLUIDAS, ENTRE OTRAS, LAS GARANTÍAS DE COMERCIABILIDAD,
-IDONEIDAD PARA UN PROPÓSITO PARTICULAR Y NO INFRACCIÓN. EN NINGÚN CASO SERÁ EL
-LOS AUTORES O TITULARES DE LOS DERECHOS DE AUTOR NO SERÁN RESPONSABLES DE NINGUNA RECLAMACIÓN, DAÑOS U OTRO
-RESPONSABILIDAD, YA SEA EN UNA ACCIÓN CONTRACTUAL, EXTRACONTRACTUAL O DE OTRO TIPO, DERIVADA DE,
-DERIVADO DE O EN RELACIÓN CON EL SOFTWARE O EL USO U OTRAS TRANSACCIONES EN EL
-SOFTWARE.
+Strictly prohibited is the copying, reproduction, redistribution, modification, 
+publication, sublicensing, sale, or reverse engineering of this Software, 
+in whole or in part, in any medium or format, without the prior written consent 
+of the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR OR COPYRIGHT 
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF 
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
