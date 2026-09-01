@@ -1,54 +1,40 @@
-import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../environments/api";
-// import LibroImage from '../assets/libro.jpg' // Requerido para el DEFAULT_FEATURED_BOOK
+import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../environments/api';
 
-// const FEATURED_BOOK_ID = 9;
-
-const DEFAULT_FEATURED_BOOK = {
-  id: null,
-  libro_id: null,
-  titulo: "Cargando...",
-  calificacion_promedio: 0,
-  isFavorite: false,
-  portada_url: '',
-};
-
-/**
- * Hook personalizado para cargar los datos iniciales de libros y el libro destacado.
- * @returns {Object} Contiene el estado de books, featuredBook y sus setters.
- */
-export function useBookData() {
-  const [books, setBooks] = useState([]);
-  const [featuredBook, setFeaturedBook] = useState({});
+export const useBookData = () => {
+  const [books, setBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/libros`)
-      .then(res => res.json())
-      .then(data => {
-        setBooks(data);
-        setFeaturedBook(DEFAULT_FEATURED_BOOK);
-        // console.log("Books loaded:", data);
+    const fetchBooks = async () => {
+      try {
+        // FIX: Cambiado /libros por /books para coincidir con Express
+        const response = await fetch(`${API_BASE_URL}/api/v1/books`);
+        
+        const text = await response.text();
+        let data: any = [];
+        try {
+          data = text ? JSON.parse(text) : [];
+        } catch {
+          throw new Error(`El servidor devolvió un formato no válido (${response.status})`);
+        }
 
-        // const featured = data.find(book =>
-        //     book.libro_id === FEATURED_BOOK_ID || book.id === FEATURED_BOOK_ID
-        // );
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Error al obtener los libros');
+        }
 
-        // if (featured) {
-        //   const actualId = featured.id || featured.libro_id;
+        setBooks(Array.isArray(data) ? data : data.books || []);
+      } catch (err: any) {
+        console.error('Error cargando libros:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        //   setFeaturedBook({
-        //     ...featured,
-        //     id: actualId,
-        //     libro_id: featured.libro_id || featured.id,
-        //     isFavorite: featured.isFavorite || false
-        //   });
-        // }
-      })
-      .catch(err => {
-        console.error("Error cargando libros:", err);
-        // Opcional: manejar estado de error
-      });
+    fetchBooks();
   }, []);
 
-  return { books, setBooks, featuredBook, setFeaturedBook };
-}
+  return { books, loading, error };
+};

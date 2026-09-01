@@ -1,23 +1,34 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { API_BASE_URL } from '../environments/api';
 import { AuthContext } from './AuthContextDefinition';
+import type { AuthContextType, User } from './AuthContextDefinition';
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(null);
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-  // Cargar usuario desde localStorage al iniciar la aplicación
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [token, setToken] = useState<string | null>(null);
+
+  // Cargar sesión almacenada al iniciar
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUserId = localStorage.getItem('userId');
 
-      if (storedToken && storedUserId) {
+      // Evita peticiones a /api/v1/users/undefined
+      if (
+        storedToken && 
+        storedUserId && 
+        storedUserId !== 'undefined' && 
+        storedUserId !== 'null'
+      ) {
         setToken(storedToken);
         try {
-          // Obtener los datos del usuario desde la API
-          const response = await fetch(`${API_BASE_URL}/api/v1/user/${storedUserId}`, {
+          // FIX: Ruta corregida de /user/ a /users/
+          const response = await fetch(`${API_BASE_URL}/api/v1/users/${storedUserId}`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
@@ -29,36 +40,28 @@ export const AuthProvider = ({ children }) => {
             setUser({
               ...userData,
               userId: storedUserId,
-              rol: localStorage.getItem('rol'),
+              rol: localStorage.getItem('rol') || undefined,
             });
           } else if (response.status === 401 || response.status === 403) {
-            // ARREGLO: solo desloguear si el token realmente es inválido o expiró.
-            // Antes, cualquier respuesta distinta de 2xx (incluyendo errores 500
-            // transitorios, por ejemplo un hiccup de conexión a la base de datos)
-            // hacía logout() y expulsaba al usuario de la sesión sin motivo real.
             logout();
           } else {
-            // Error transitorio del servidor (500, etc.): NO desloguear.
-            // Mantenemos la sesión con los datos que ya teníamos en localStorage
-            // para no expulsar al usuario por una falla momentánea del backend/DB.
-            console.warn('Error temporal al validar sesión, se mantiene el token.');
+            console.warn('Error temporal al validar sesión, se mantiene el token local.');
             setUser({
               userId: storedUserId,
-              rol: localStorage.getItem('rol'),
-              nombre: localStorage.getItem('username'),
+              rol: localStorage.getItem('rol') || undefined,
+              nombre: localStorage.getItem('username') || undefined,
             });
           }
         } catch (error) {
-          // ARREGLO: un error de red (backend caído, sin conexión, DNS, etc.)
-          // tampoco debería cerrar la sesión del usuario. Mantenemos el estado
-          // con lo último guardado en localStorage.
           console.error('Error al cargar datos del usuario:', error);
           setUser({
             userId: storedUserId,
-            rol: localStorage.getItem('rol'),
-            nombre: localStorage.getItem('username'),
+            rol: localStorage.getItem('rol') || undefined,
+            nombre: localStorage.getItem('username') || undefined,
           });
         }
+      } else {
+        logout();
       }
       setLoading(false);
     };
@@ -66,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email: string, password: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
@@ -74,49 +77,61 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, contrasena: password }),
       });
 
-      const data = await response.json();
+      // FIX: Parsing seguro para evitar la falla "Unexpected token '<'" en errores 404/500
+      const responseText = await response.text();
+      let data: any = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`Respuesta no válida del servidor (${response.status})`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al iniciar sesión');
+        throw new Error(data.error || data.mensaje || 'Error al iniciar sesión');
       }
 
-      // Guardar los datos básicos
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('userId', data.userId);
-      localStorage.setItem('rol', data.rol);
+      // Extraer objeto de usuario
+      const userObj = data.usuario || data.user || data;
 
-      setToken(data.token);
+      console.log('Objeto usuario recibido en el frontend:', userObj);
 
-      // Obtener el perfil completo del usuario
-      const profileResponse = await fetch(`${API_BASE_URL}/api/v1/user/${data.userId}`, {
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${data.token}`
-        }
-      });
+      // Buscar el identificador soportando todas las variantes posibles de DB/backend
+      const extractedUserId = 
+        userObj.id || 
+        userObj.userId || 
+        userObj.id_usuario || 
+        userObj._id || 
+        userObj.usuario_id ||
+        data.userId ||
+        data.id;
 
-      const profileData = await profileResponse.json();
+      const extractedToken = data.token || userObj.token || 'session-active';
+      const extractedRol = userObj.rol || userObj.role || data.rol;
 
-      if (!profileResponse.ok) {
-        throw new Error(profileData.error || 'No se pudo obtener el perfil del usuario');
+      if (!extractedUserId) {
+        console.error('Estructura completa de la respuesta:', data);
+        throw new Error('El servidor no devolvió un ID de usuario explícito.');
       }
 
-      // Guardar el nombre en localStorage
-      localStorage.setItem('username', profileData.nombre);
+      // Guardar en localStorage
+      localStorage.setItem('token', extractedToken);
+      localStorage.setItem('userId', String(extractedUserId));
+      if (extractedRol) localStorage.setItem('rol', String(extractedRol));
+      if (userObj.nombre) localStorage.setItem('username', userObj.nombre);
 
-      // Actualizar el estado del usuario
+      setToken(extractedToken);
+
       setUser({
-        ...profileData,
-        userId: data.userId,
-        rol: data.rol,
+        ...userObj,
+        userId: String(extractedUserId),
+        rol: extractedRol,
       });
 
       return { success: true };
-    } catch (error) {
-      const errorMessage =
-        error.message.includes('Failed to fetch')
-          ? 'No se pudo conectar con el servidor. ¿Está en ejecución?'
-          : error.message;
+    } catch (error: any) {
+      const errorMessage = error.message?.includes('Failed to fetch')
+        ? 'No se pudo conectar con el servidor. ¿Está en ejecución?'
+        : error.message || 'Error desconocido';
       return { success: false, error: errorMessage };
     }
   };
@@ -130,10 +145,11 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
-  const updateUser = async (updatedData) => {
+  const updateUser = async (updatedData: Record<string, any>) => {
     try {
       const userId = localStorage.getItem('userId');
-      const response = await fetch(`${API_BASE_URL}/api/v1/user/${userId}`, {
+      // FIX: Ruta corregida de /user/ a /users/
+      const response = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -142,28 +158,34 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify(updatedData)
       });
 
+      const responseText = await response.text();
+      let userData: any = {};
+      try {
+        userData = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error('Error al interpretar la respuesta del servidor');
+      }
+
       if (response.ok) {
-        const userData = await response.json();
-        setUser({
-          ...user,
+        setUser((prevUser) => ({
+          ...prevUser,
           ...userData
-        });
-        // Actualizar localStorage si es necesario
+        }));
+        
         if (userData.nombre) {
           localStorage.setItem('username', userData.nombre);
         }
         return { success: true };
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar el usuario');
+        throw new Error(userData.error || 'Error al actualizar el usuario');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al actualizar usuario:', error);
       return { success: false, error: error.message };
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     token,
     loading,
