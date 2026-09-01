@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./dist",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     
-    /* Soporte para JavaScript secundario (scripts o migraciones) */
+    /* Soporte para JavaScript secundario */
     "allowJs": true,
     "checkJs": false,
     
-    /* Configuración de compilación y tipos */
+    /* Configuración de comprobación y tipos */
     "sourceMap": true,
     "strict": false,
     "skipLibCheck": true,
