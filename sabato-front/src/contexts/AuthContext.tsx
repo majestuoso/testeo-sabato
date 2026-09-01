@@ -17,8 +17,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUserId = localStorage.getItem('userId');
+      const storedName = localStorage.getItem('username');
 
-      // Evita peticiones a /api/v1/users/undefined
       if (
         storedToken && 
         storedUserId && 
@@ -27,7 +27,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ) {
         setToken(storedToken);
         try {
-          // FIX: Ruta corregida de /user/ a /users/
           const response = await fetch(`${API_BASE_URL}/api/v1/users/${storedUserId}`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
@@ -37,27 +36,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (response.ok) {
             const userData = await response.json();
+            
+            // Consigue el nombre desde la API o recupera el guardado en localStorage
+            const nombreFinal = 
+              userData.nombre || 
+              userData.username || 
+              userData.nombre_usuario || 
+              storedName || 
+              'Florencia';
+
             setUser({
               ...userData,
               userId: storedUserId,
-              rol: localStorage.getItem('rol') || undefined,
+              usuario_id: Number(storedUserId),
+              nombre: nombreFinal,
+              username: nombreFinal, // Sincroniza ambas claves para la UI
+              rol: userData.rol?.nombre_rol || userData.rol || localStorage.getItem('rol') || undefined,
             });
+
+            localStorage.setItem('username', nombreFinal);
           } else if (response.status === 401 || response.status === 403) {
             logout();
           } else {
-            console.warn('Error temporal al validar sesión, se mantiene el token local.');
+            console.warn('Error temporal al validar sesión, se mantendrán los datos locales.');
+            const fallbackName = storedName || 'Florencia';
             setUser({
               userId: storedUserId,
+              usuario_id: Number(storedUserId),
               rol: localStorage.getItem('rol') || undefined,
-              nombre: localStorage.getItem('username') || undefined,
+              nombre: fallbackName,
+              username: fallbackName,
             });
           }
         } catch (error) {
           console.error('Error al cargar datos del usuario:', error);
+          const fallbackName = storedName || 'Florencia';
           setUser({
             userId: storedUserId,
+            usuario_id: Number(storedUserId),
             rol: localStorage.getItem('rol') || undefined,
-            nombre: localStorage.getItem('username') || undefined,
+            nombre: fallbackName,
+            username: fallbackName,
           });
         }
       } else {
@@ -77,7 +96,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, contrasena: password }),
       });
 
-      // FIX: Parsing seguro para evitar la falla "Unexpected token '<'" en errores 404/500
       const responseText = await response.text();
       let data: any = {};
       try {
@@ -90,40 +108,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(data.error || data.mensaje || 'Error al iniciar sesión');
       }
 
-      // Extraer objeto de usuario
       const userObj = data.usuario || data.user || data;
 
-      console.log('Objeto usuario recibido en el frontend:', userObj);
-
-      // Buscar el identificador soportando todas las variantes posibles de DB/backend
       const extractedUserId = 
+        userObj.usuario_id ||
         userObj.id || 
         userObj.userId || 
         userObj.id_usuario || 
-        userObj._id || 
-        userObj.usuario_id ||
         data.userId ||
         data.id;
 
       const extractedToken = data.token || userObj.token || 'session-active';
-      const extractedRol = userObj.rol || userObj.role || data.rol;
+      const extractedRol = userObj.rol?.nombre_rol || userObj.rol || userObj.role || data.rol;
+      const extractedName = userObj.nombre || userObj.username || userObj.nombre_usuario || 'Florencia';
 
       if (!extractedUserId) {
-        console.error('Estructura completa de la respuesta:', data);
         throw new Error('El servidor no devolvió un ID de usuario explícito.');
       }
 
       // Guardar en localStorage
       localStorage.setItem('token', extractedToken);
       localStorage.setItem('userId', String(extractedUserId));
+      localStorage.setItem('username', extractedName);
       if (extractedRol) localStorage.setItem('rol', String(extractedRol));
-      if (userObj.nombre) localStorage.setItem('username', userObj.nombre);
 
       setToken(extractedToken);
 
       setUser({
         ...userObj,
         userId: String(extractedUserId),
+        usuario_id: Number(extractedUserId),
+        nombre: extractedName,
+        username: extractedName,
         rol: extractedRol,
       });
 
@@ -148,7 +164,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateUser = async (updatedData: Record<string, any>) => {
     try {
       const userId = localStorage.getItem('userId');
-      // FIX: Ruta corregida de /user/ a /users/
       const response = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
         method: 'PUT',
         headers: {
@@ -167,13 +182,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (response.ok) {
+        const nuevoNombre = userData.nombre || userData.username || userData.nombre_usuario;
+
         setUser((prevUser) => ({
           ...prevUser,
-          ...userData
+          ...userData,
+          nombre: nuevoNombre || prevUser?.nombre,
+          username: nuevoNombre || prevUser?.username,
         }));
         
-        if (userData.nombre) {
-          localStorage.setItem('username', userData.nombre);
+        if (nuevoNombre) {
+          localStorage.setItem('username', nuevoNombre);
         }
         return { success: true };
       } else {

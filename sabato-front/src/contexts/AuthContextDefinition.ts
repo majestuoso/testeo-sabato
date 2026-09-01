@@ -2,8 +2,10 @@ import { createContext } from 'react';
 
 export interface User {
   userId?: string;
+  usuario_id?: number; // Para coincidir con el schema de Prisma
   id?: string;
   nombre?: string;
+  username?: string;  // Previene errores en componentes que busquen .username
   email?: string;
   rol?: string;
   avatar_url?: string;

@@ -1,31 +1,35 @@
 import prisma from '../prisma.js';
 
-const prismaClient = prisma as any;
-
 interface CrearPostData {
     titulo: string;
-    contenido: string;
+    descripcion?: string;
 }
 
 class ForoService {
     async obtenerTodos() {
-        return await prismaClient.foro_post.findMany({
-            include: { usuario: true }
+        return await prisma.foro.findMany({
+            include: { 
+                usuario: true // Incluye la información del creador del foro
+            }
         });
     }
 
     async obtenerPorId(id: number | string) {
-        return await prismaClient.foro_post.findUnique({
-            where: { id: Number(id) },
-            include: { usuario: true, respuestas: true }
+        return await prisma.foro.findUnique({
+            where: { foro_id: Number(id) }, // Tu llave primaria es 'foro_id'
+            include: { 
+                usuario: true, 
+                comentario_foro: true // La relación con comentarios se llama 'comentario_foro'
+            }
         });
     }
 
-    async crear(usuario_id: number | string, data: CrearPostData) {
-        return await prismaClient.foro_post.create({
+    async crear(creador_id: number | string, data: CrearPostData) {
+        return await prisma.foro.create({
             data: {
-                usuario_id: Number(usuario_id),
-                ...data
+                creador_id: Number(creador_id),
+                titulo: data.titulo,
+                descripcion: data.descripcion
             }
         });
     }

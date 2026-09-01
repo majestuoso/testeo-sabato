@@ -6,6 +6,7 @@ export const obtenerPostsForo = async (_req: Request, res: Response) => {
         const posts = await foroService.obtenerTodos();
         res.json(posts);
     } catch (error: any) {
+        console.error("DETALLE DEL ERROR EN FORO:", error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -27,8 +28,15 @@ export const obtenerPostPorId = async (req: Request, res: Response) => {
 
 export const crearPostForo = async (req: Request, res: Response) => {
     try {
-        const { usuario_id, titulo, contenido } = req.body;
-        const nuevoPost = await foroService.crear(usuario_id, { titulo, contenido });
+        // Recibimos los datos del cuerpo de la petición
+        const { usuario_id, titulo, contenido, descripcion } = req.body;
+
+        // Se asigna 'contenido' a 'descripcion' para coincidir con el schema de Prisma
+        const nuevoPost = await foroService.crear(usuario_id, { 
+            titulo, 
+            descripcion: contenido || descripcion 
+        });
+
         res.status(201).json(nuevoPost);
     } catch (error: any) {
         res.status(500).json({ error: error.message });

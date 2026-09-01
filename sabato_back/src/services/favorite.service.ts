@@ -4,7 +4,7 @@ class FavoriteService {
     async obtenerPorUsuario(usuario_id: number | string) {
         return await prisma.favorito.findMany({
             where: { usuario_id: Number(usuario_id) },
-            include: { libro: true }
+            include: { libro: true } // Trae la información del libro asignado
         });
     }
 
@@ -18,10 +18,12 @@ class FavoriteService {
     }
 
     async eliminar(usuario_id: number | string, libro_id: number | string) {
-        return await prisma.favorito.deleteMany({
+        return await prisma.favorito.delete({
             where: {
-                usuario_id: Number(usuario_id),
-                libro_id: Number(libro_id)
+                usuario_id_libro_id: {
+                    usuario_id: Number(usuario_id),
+                    libro_id: Number(libro_id)
+                }
             }
         });
     }
