@@ -6,10 +6,10 @@ import { API_BASE_URL } from "../environments/api";
  * @param {object} options - Opciones de fetch (method, headers, body, etc.)
  * @returns {Promise<object>} Respuesta JSON o error
  */
-async function apiRequest(endpoint, options = {}) {
+async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}/api/v1${endpoint}`;
 
-  const defaultOptions = {
+  const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
     },
@@ -43,16 +43,19 @@ export async function getCatalogoLibros() {
 
 /**
  * Buscar libros con filtros
- * @param {object} filtros - Objeto con filtros {titulo, autor, genero, nivel_educativo}
+ * @param {Record<string, any>} filtros - Objeto con filtros {titulo, autor, genero, nivel_educativo}
  * @returns {Promise<Array>} Lista de libros filtrados
  */
-export async function buscarLibros(filtros = {}) {
+export async function buscarLibros(filtros: Record<string, any> = {}) {
   // Construir query string con los filtros
   const params = new URLSearchParams();
 
   Object.entries(filtros).forEach(([key, value]) => {
-    if (value && value.trim()) {
-      params.append(key, value.trim());
+    if (value !== null && value !== undefined) {
+      const stringValue = String(value).trim();
+      if (stringValue !== "") {
+        params.append(key, stringValue);
+      }
     }
   });
 
@@ -64,10 +67,10 @@ export async function buscarLibros(filtros = {}) {
 
 /**
  * Obtener detalle de un libro específico
- * @param {number} libroId - ID del libro
+ * @param {number|string} libroId - ID del libro
  * @returns {Promise<object>} Datos del libro
  */
-export async function getLibroById(libroId) {
+export async function getLibroById(libroId: number | string) {
   return await apiRequest(`/libros/${libroId}`);
 }
 
@@ -76,6 +79,6 @@ export async function getLibroById(libroId) {
  * @param {number|string} userId - ID del usuario
  * @returns {Promise<Array>} Lista de medallas
  */
-export async function getUserMedals(userId) {
-  return await apiRequest(`/medal/${userId}`);
+export async function getUserMedals(userId: number | string) {
+  return await apiRequest(`/medallas/usuario/${userId}`);
 }

@@ -47,8 +47,11 @@ app.use('/api/listas', listaRoutes);
 app.use('/api/v1/lista-lectura', listaLecturaRoutes);
 app.use('/api/lista-lectura', listaLecturaRoutes);
 
+/* Rutas de medallas / insignias (soporta /medallas y /medal) */
 app.use('/api/v1/medallas', medalRoutes);
 app.use('/api/medallas', medalRoutes);
+app.use('/api/v1/medal', medalRoutes);
+app.use('/api/medal', medalRoutes);
 
 app.use('/api/v1/opiniones', opinionRoutes);
 app.use('/api/opiniones', opinionRoutes);

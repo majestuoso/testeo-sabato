@@ -10,30 +10,26 @@ import InsigniaUnica from '../components/InsigniaUnica';
 import { useAuth } from '../hooks/useAuth';
 import { getUserMedals } from '../services/apiService';
 
-
 const Insignias = () => {
   const theme = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useAuth();
 
   // ----------------------------------------------------
-  // DATOS DINÁMICOS (Se simula la obtención de datos del usuario)
+  // DATOS DINÁMICOS (Se obtiene el nombre del usuario logueado)
   // ----------------------------------------------------
 
-  const username = user ? user.nombre : 'Usuario'; // Obtener nombre real del usuario logueado
-
+  const username = user ? user.nombre : 'Usuario';
 
   // Estado para las medallas del usuario
-  const [insigniasUsuario, setInsigniasUsuario] = useState([]);
+  const [insigniasUsuario, setInsigniasUsuario] = useState<any[]>([]);
 
   useEffect(() => {
     if (user?.usuario_id) {
       getUserMedals(user.usuario_id)
         .then((medals) => {
-          
-          // Si el endpoint devuelve un array de strings o de objetos, ajusta aquí
+          // Asignar el array de medallas sin imprimir datos sensibles en consola
           setInsigniasUsuario(Array.isArray(medals) ? medals : []);
-          console.log(medals, user);
         })
         .catch(() => setInsigniasUsuario([]));
     }
@@ -42,9 +38,13 @@ const Insignias = () => {
   // Fecha dinámica (formato en español, con mayúscula inicial)
   const formattedDate = (() => {
     const d = new Date();
-    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    // Usamos locale 'es-ES' y capitalizamos la primera letra
-    return d.toLocaleDateString('es-ES', opts).replace(/^./, c => c.toUpperCase());
+    const opts: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
+    return d.toLocaleDateString('es-ES', opts).replace(/^./, (c) => c.toUpperCase());
   })();
 
   // ----------------------------------------------------
@@ -61,13 +61,11 @@ const Insignias = () => {
         },
         margin: '0 auto',
         height: '100vh',
-        // Fondo general sutil
         display: 'flex',
         flexDirection: 'column',
         overflowY: 'auto',
       }}
     >
-
       {/* 1. COMPONENTE DE ENCABEZADO */}
       <AppHeader
         onMenuClick={() => setMenuOpen(true)}
@@ -76,15 +74,22 @@ const Insignias = () => {
       />
 
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
-
         {/* Paper contenedor con estilo similar a CommentSection */}
-        <Paper sx={{ mx: 0, px: 0, display: 'flex', flexDirection: 'column', borderRadius: 0, boxShadow: 'none' }}>
-
+        <Paper
+          sx={{
+            mx: 0,
+            px: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: 0,
+            boxShadow: 'none',
+          }}
+        >
           <Typography
             variant="subtitle1"
             fontWeight="bold"
             gutterBottom
-            sx={{ color: theme.palette.body?.main || '#4A4C52' }}
+            sx={{ color: (theme.palette as any).body?.main ?? '#4A4C52' }}
           >
             Insignias
           </Typography>
@@ -97,7 +102,7 @@ const Insignias = () => {
             }
             return rows.map((row, rowIndex) => (
               <Box key={rowIndex} sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                {row.map((insignia, index) => (
+                {row.map((insignia: any, index: number) => (
                   <Box key={insignia.medalla_id ?? index} sx={{ mx: 1 }}>
                     <InsigniaUnica insignia={insignia} />
                   </Box>
@@ -105,9 +110,7 @@ const Insignias = () => {
               </Box>
             ));
           })()}
-
         </Paper>
-
       </Box>
     </Box>
   );
